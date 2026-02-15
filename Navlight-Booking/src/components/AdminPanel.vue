@@ -10,6 +10,7 @@
       </div>
     </div>
     <div v-else>
+      <div v-if="actionError" class="error action-error">{{ actionError }}</div>
       <ul v-if="bookings.length">
         <li v-for="booking in bookings" :key="booking.id" class="admin-booking">
           <div>
@@ -35,10 +36,24 @@
             </div>
           </div>
           <button @click="startEdit(booking)" class="btn secondary">Edit Booking</button>
-          <button @click="deleteBooking(booking.id)" class="btn danger">Delete Booking</button>
+          <button @click="confirmDelete(booking)" class="btn danger">Delete Booking</button>
         </li>
       </ul>
       <div v-else>No bookings found.</div>
+
+      <div v-if="showDeleteDialog" class="dialog delete-dialog">
+        <h3>Delete Booking</h3>
+        <p class="delete-copy">
+          Are you sure you want to delete
+          <strong>{{ pendingDeleteBooking?.eventName }}</strong>
+          ({{ pendingDeleteBooking?.navlightSet }})?
+        </p>
+        <p class="delete-copy subtle">This action cannot be undone.</p>
+        <div class="dialog-actions">
+          <button @click="runDelete" class="btn danger">Yes, Delete</button>
+          <button @click="cancelDelete" class="btn secondary">Cancel</button>
+        </div>
+      </div>
 
       <div v-if="showEditDialog" class="dialog edit-dialog">
         <h3>Edit Booking</h3>
@@ -136,10 +151,13 @@ import { ref, onMounted } from 'vue'
 import { fetchBookings, updateBooking, deleteBooking as apiDeleteBooking, adminLogin } from '../api/bookings.js'
 import { formatDisplayDate } from '../utils/dateFormat.js'
 
+const emit = defineEmits(['bookings-updated'])
+
 const bookings = ref([])
 const showPickupDialog = ref(false)
 const showReturnDialog = ref(false)
 const showEditDialog = ref(false)
+const showDeleteDialog = ref(false)
 const pickupDate = ref('')
 const pickupMissingPunches = ref('')
 const returnDate = ref('')
@@ -161,10 +179,12 @@ const editForm = ref({
   returnMissingPunchesInput: '',
 })
 let currentBooking = null
+const pendingDeleteBooking = ref(null)
 
 const adminPassword = ref('')
 const adminToken = ref(localStorage.getItem('adminToken') || '')
 const loginError = ref('')
+const actionError = ref('')
 
 function normalizeStatus(status) {
   if (!status) return 'booked'
@@ -190,6 +210,18 @@ async function login() {
 
 async function loadBookings() {
   bookings.value = await fetchBookings()
+}
+
+function handleAdminError(error, fallbackMessage) {
+  const message = error?.message || fallbackMessage
+  if (message.toLowerCase().includes('unauthorized')) {
+    adminToken.value = ''
+    localStorage.removeItem('adminToken')
+    bookings.value = []
+    actionError.value = 'Your admin session expired. Please log in again.'
+    return
+  }
+  actionError.value = message
 }
 
 onMounted(() => {
@@ -236,6 +268,7 @@ function cancelEdit() {
 
 async function saveEdit() {
   editError.value = ''
+  actionError.value = ''
   if (!editForm.value.id) return
 
   try {
@@ -261,9 +294,12 @@ async function saveEdit() {
     }, adminToken.value)
 
     await loadBookings()
+    emit('bookings-updated')
     showEditDialog.value = false
   } catch (e) {
-    editError.value = e.message || 'Failed to update booking.'
+    const message = e?.message || 'Failed to update booking.'
+    editError.value = message
+    handleAdminError(e, 'Failed to update booking.')
   }
 }
 
@@ -274,29 +310,61 @@ function cancelDialog() {
 }
 async function confirmPickup() {
   if (!currentBooking) return
-  await updateBooking(currentBooking.id, {
-    status: 'pickedup',
-    actualPickupDate: pickupDate.value,
-    pickupMissingPunches: pickupMissingPunches.value.split(',').map(s => s.trim()).filter(Boolean),
-  }, adminToken.value)
-  await loadBookings()
-  showPickupDialog.value = false
-  currentBooking = null
+  actionError.value = ''
+  try {
+    await updateBooking(currentBooking.id, {
+      status: 'pickedup',
+      actualPickupDate: pickupDate.value,
+      pickupMissingPunches: pickupMissingPunches.value.split(',').map(s => s.trim()).filter(Boolean),
+    }, adminToken.value)
+    await loadBookings()
+    emit('bookings-updated')
+    showPickupDialog.value = false
+    currentBooking = null
+  } catch (e) {
+    handleAdminError(e, 'Failed to update pickup status.')
+  }
 }
 async function confirmReturn() {
   if (!currentBooking) return
-  await updateBooking(currentBooking.id, {
-    status: 'returned',
-    actualReturnDate: returnDate.value,
-    returnMissingPunches: returnMissingPunches.value.split(',').map(s => s.trim()).filter(Boolean),
-  }, adminToken.value)
-  await loadBookings()
-  showReturnDialog.value = false
-  currentBooking = null
+  actionError.value = ''
+  try {
+    await updateBooking(currentBooking.id, {
+      status: 'returned',
+      actualReturnDate: returnDate.value,
+      returnMissingPunches: returnMissingPunches.value.split(',').map(s => s.trim()).filter(Boolean),
+    }, adminToken.value)
+    await loadBookings()
+    emit('bookings-updated')
+    showReturnDialog.value = false
+    currentBooking = null
+  } catch (e) {
+    handleAdminError(e, 'Failed to update return status.')
+  }
 }
-async function deleteBooking(id) {
-  await apiDeleteBooking(id, adminToken.value)
-  await loadBookings()
+
+function confirmDelete(booking) {
+  pendingDeleteBooking.value = booking
+  showDeleteDialog.value = true
+}
+
+function cancelDelete() {
+  showDeleteDialog.value = false
+  pendingDeleteBooking.value = null
+}
+
+async function runDelete() {
+  if (!pendingDeleteBooking.value) return
+  actionError.value = ''
+  try {
+    await apiDeleteBooking(pendingDeleteBooking.value.id, adminToken.value)
+    await loadBookings()
+    emit('bookings-updated')
+    showDeleteDialog.value = false
+    pendingDeleteBooking.value = null
+  } catch (e) {
+    handleAdminError(e, 'Failed to delete booking.')
+  }
 }
 </script>
 
@@ -403,6 +471,20 @@ input:focus {
   min-width: 460px;
 }
 
+.delete-dialog {
+  min-width: 420px;
+}
+
+.delete-copy {
+  margin: 0;
+  color: #334155;
+}
+
+.delete-copy.subtle {
+  color: #64748b;
+  font-size: 13px;
+}
+
 .login-card {
   position: static;
   transform: none;
@@ -440,5 +522,9 @@ label {
   border: 1px solid #f7cac7;
   border-radius: 10px;
   padding: 8px 10px;
+}
+
+.action-error {
+  margin-bottom: 12px;
 }
 </style>

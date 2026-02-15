@@ -12,7 +12,7 @@
     <BookingForm @booking-success="refreshBookings" />
   </div>
   <div class="panel" v-else-if="view === 'admin'">
-    <AdminPanel />
+    <AdminPanel @bookings-updated="syncBookings" />
   </div>
 </template>
 
@@ -26,8 +26,12 @@ import { fetchBookings } from '../api/bookings.js'
 const view = ref('calendar')
 const bookings = ref([])
 
-async function refreshBookings() {
+async function syncBookings() {
   bookings.value = await fetchBookings()
+}
+
+async function refreshBookings() {
+  await syncBookings()
   view.value = 'calendar'
 }
 
