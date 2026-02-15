@@ -11,7 +11,7 @@
               <strong>{{ booking.eventName }}</strong>
               <span class="set-chip">{{ booking.navlightSet }}</span>
             </div>
-            <div class="booking-dates">{{ booking.pickupDate }} → {{ booking.returnDate }}</div>
+            <div class="booking-dates">{{ formatDisplayDate(booking.pickupDate) }} → {{ formatDisplayDate(booking.returnDate) }}</div>
             <div class="booking-name">Name: {{ booking.name }}</div>
           </li>
         </ul>
@@ -24,6 +24,7 @@
 <script setup>
 import { computed } from 'vue'
 import { format, addMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns'
+import { formatDisplayDate } from '../utils/dateFormat.js'
 
 const props = defineProps({ bookings: Array })
 

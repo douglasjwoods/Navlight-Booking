@@ -6,7 +6,7 @@
         <strong>{{ booking.eventName }}</strong> ({{ booking.navlightSet }})<br>
         Name: {{ booking.name }}<br>
         Email: {{ booking.email }}<br>
-        Pickup: {{ booking.pickupDate }} | Event: {{ booking.eventDate }} | Return: {{ booking.returnDate }}
+        Pickup: {{ formatDisplayDate(booking.pickupDate) }} | Event: {{ formatDisplayDate(booking.eventDate) }} | Return: {{ formatDisplayDate(booking.returnDate) }}
       </li>
     </ul>
     <div v-else>No bookings found.</div>
@@ -16,6 +16,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { fetchBookings } from '../api/bookings.js'
+import { formatDisplayDate } from '../utils/dateFormat.js'
 
 const bookings = ref([])
 const error = ref('')

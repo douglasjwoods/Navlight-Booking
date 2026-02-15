@@ -15,7 +15,7 @@
           <div>
             <strong>{{ booking.eventName }}</strong> ({{ booking.navlightSet }})<br>
             Name: {{ booking.name }}<br>
-            Pickup: {{ booking.pickupDate }} | Event: {{ booking.eventDate }} | Return: {{ booking.returnDate }}<br>
+            Pickup: {{ formatDisplayDate(booking.pickupDate) }} | Event: {{ formatDisplayDate(booking.eventDate) }} | Return: {{ formatDisplayDate(booking.returnDate) }}<br>
             Status: {{ booking.status }}
           </div>
           <div v-if="booking.status === 'confirmed'">
@@ -23,14 +23,14 @@
           </div>
           <div v-if="booking.status === 'pickedup'">
             <div>
-              Picked up: {{ booking.actualPickupDate }}<br>
+              Picked up: {{ formatDisplayDate(booking.actualPickupDate) }}<br>
               Missing punches: {{ booking.pickupMissingPunches?.join(', ') || 'None' }}
             </div>
             <button @click="startReturn(booking)">Mark as Returned</button>
           </div>
           <div v-if="booking.status === 'returned'">
             <div>
-              Returned: {{ booking.actualReturnDate }}<br>
+              Returned: {{ formatDisplayDate(booking.actualReturnDate) }}<br>
               Missing punches: {{ booking.returnMissingPunches?.join(', ') || 'None' }}
             </div>
           </div>
@@ -44,6 +44,7 @@
         <h3>Mark as Picked Up</h3>
         <label>Date of Pickup</label>
         <input type="date" v-model="pickupDate" />
+        <div class="date-preview" v-if="pickupDate">Display format: {{ formatDisplayDate(pickupDate) }}</div>
         <label>Missing Punch Numbers (comma separated)
           <input v-model="pickupMissingPunches" placeholder="e.g. 101,102" />
         </label>
@@ -58,6 +59,7 @@
         <h3>Mark as Returned</h3>
         <label>Date of Return</label>
         <input type="date" v-model="returnDate" />
+        <div class="date-preview" v-if="returnDate">Display format: {{ formatDisplayDate(returnDate) }}</div>
         <label>Missing Punch Numbers (comma separated)
           <input v-model="returnMissingPunches" placeholder="e.g. 101,102" />
         </label>
@@ -73,6 +75,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { fetchBookings, updateBooking, deleteBooking as apiDeleteBooking, adminLogin } from '../api/bookings.js'
+import { formatDisplayDate } from '../utils/dateFormat.js'
 
 const bookings = ref([])
 const showPickupDialog = ref(false)
@@ -257,6 +260,13 @@ label {
   display: flex;
   gap: 8px;
   margin-top: 4px;
+}
+
+.date-preview {
+  margin-top: -4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #475569;
 }
 
 .error {
