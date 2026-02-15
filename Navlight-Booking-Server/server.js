@@ -1,3 +1,4 @@
+
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -9,6 +10,32 @@ const BOOKINGS_FILE = path.join(__dirname, 'bookings.json');
 
 app.use(cors());
 app.use(express.json());
+
+// Simple admin password (in production, use env var and HTTPS)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'navlightadmin';
+
+// In-memory token store (for demo; use sessions/DB for production)
+const adminTokens = new Set();
+
+// POST /admin/login
+app.post('/admin/login', (req, res) => {
+  const { password } = req.body;
+  if (password === ADMIN_PASSWORD) {
+    // Issue a simple token
+    const token = Math.random().toString(36).slice(2) + Date.now();
+    adminTokens.add(token);
+    res.json({ token });
+  } else {
+    res.status(401).json({ error: 'Invalid password' });
+  }
+});
+
+// Middleware to check admin token
+function requireAdmin(req, res, next) {
+  const token = req.headers['x-admin-token'];
+  if (adminTokens.has(token)) return next();
+  res.status(401).json({ error: 'Unauthorized' });
+}
 
 // Helper: Load bookings
 function loadBookings() {
@@ -65,7 +92,7 @@ app.post('/bookings', (req, res) => {
 
 
 // PATCH /bookings/:id (update pickup/return info)
-app.patch('/bookings/:id', (req, res) => {
+app.patch('/bookings/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);
   const bookings = loadBookings();
   const idx = bookings.findIndex(b => b.id === id);
@@ -90,7 +117,7 @@ app.patch('/bookings/:id', (req, res) => {
 });
 
 // DELETE /bookings/:id
-app.delete('/bookings/:id', (req, res) => {
+app.delete('/bookings/:id', requireAdmin, (req, res) => {
   const id = parseInt(req.params.id, 10);
   let bookings = loadBookings();
   const idx = bookings.findIndex(b => b.id === id);

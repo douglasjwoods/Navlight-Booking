@@ -1,62 +1,72 @@
 <template>
   <div>
     <h2>Admin Panel</h2>
-    <ul v-if="bookings.length">
-      <li v-for="booking in bookings" :key="booking.id" class="admin-booking">
-        <div>
-          <strong>{{ booking.eventName }}</strong> ({{ booking.navlightSet }})<br>
-          Name: {{ booking.name }}<br>
-          Pickup: {{ booking.pickupDate }} | Event: {{ booking.eventDate }} | Return: {{ booking.returnDate }}<br>
-          Status: {{ booking.status }}
-        </div>
-        <div v-if="booking.status === 'confirmed'">
-          <button @click="startPickup(booking)">Mark as Picked Up</button>
-        </div>
-        <div v-if="booking.status === 'pickedup'">
-          <div>
-            Picked up: {{ booking.actualPickupDate }}<br>
-            Missing punches: {{ booking.pickupMissingPunches?.join(', ') || 'None' }}
-          </div>
-          <button @click="startReturn(booking)">Mark as Returned</button>
-        </div>
-        <div v-if="booking.status === 'returned'">
-          <div>
-            Returned: {{ booking.actualReturnDate }}<br>
-            Missing punches: {{ booking.returnMissingPunches?.join(', ') || 'None' }}
-          </div>
-        </div>
-        <button @click="deleteBooking(booking.id)" class="delete">Delete Booking</button>
-      </li>
-    </ul>
-    <div v-else>No bookings found.</div>
-
-    <!-- Pickup Dialog -->
-    <div v-if="showPickupDialog" class="dialog">
-      <h3>Mark as Picked Up</h3>
-      <label>Date of Pickup: <input type="date" v-model="pickupDate" /></label>
-      <label>Missing Punch Numbers (comma separated):
-        <input v-model="pickupMissingPunches" placeholder="e.g. 101,102" />
-      </label>
-      <button @click="confirmPickup">Confirm</button>
-      <button @click="cancelDialog">Cancel</button>
+    <div v-if="!adminToken">
+      <div class="dialog">
+        <h3>Admin Login</h3>
+        <input type="password" v-model="adminPassword" placeholder="Enter admin password" />
+        <div v-if="loginError" class="error">{{ loginError }}</div>
+        <button @click="login">Login</button>
+      </div>
     </div>
+    <div v-else>
+      <ul v-if="bookings.length">
+        <li v-for="booking in bookings" :key="booking.id" class="admin-booking">
+          <div>
+            <strong>{{ booking.eventName }}</strong> ({{ booking.navlightSet }})<br>
+            Name: {{ booking.name }}<br>
+            Pickup: {{ booking.pickupDate }} | Event: {{ booking.eventDate }} | Return: {{ booking.returnDate }}<br>
+            Status: {{ booking.status }}
+          </div>
+          <div v-if="booking.status === 'confirmed'">
+            <button @click="startPickup(booking)">Mark as Picked Up</button>
+          </div>
+          <div v-if="booking.status === 'pickedup'">
+            <div>
+              Picked up: {{ booking.actualPickupDate }}<br>
+              Missing punches: {{ booking.pickupMissingPunches?.join(', ') || 'None' }}
+            </div>
+            <button @click="startReturn(booking)">Mark as Returned</button>
+          </div>
+          <div v-if="booking.status === 'returned'">
+            <div>
+              Returned: {{ booking.actualReturnDate }}<br>
+              Missing punches: {{ booking.returnMissingPunches?.join(', ') || 'None' }}
+            </div>
+          </div>
+          <button @click="deleteBooking(booking.id)" class="delete">Delete Booking</button>
+        </li>
+      </ul>
+      <div v-else>No bookings found.</div>
 
-    <!-- Return Dialog -->
-    <div v-if="showReturnDialog" class="dialog">
-      <h3>Mark as Returned</h3>
-      <label>Date of Return: <input type="date" v-model="returnDate" /></label>
-      <label>Missing Punch Numbers (comma separated):
-        <input v-model="returnMissingPunches" placeholder="e.g. 101,102" />
-      </label>
-      <button @click="confirmReturn">Confirm</button>
-      <button @click="cancelDialog">Cancel</button>
+      <!-- Pickup Dialog -->
+      <div v-if="showPickupDialog" class="dialog">
+        <h3>Mark as Picked Up</h3>
+        <label>Date of Pickup: <input type="date" v-model="pickupDate" /></label>
+        <label>Missing Punch Numbers (comma separated):
+          <input v-model="pickupMissingPunches" placeholder="e.g. 101,102" />
+        </label>
+        <button @click="confirmPickup">Confirm</button>
+        <button @click="cancelDialog">Cancel</button>
+      </div>
+
+      <!-- Return Dialog -->
+      <div v-if="showReturnDialog" class="dialog">
+        <h3>Mark as Returned</h3>
+        <label>Date of Return: <input type="date" v-model="returnDate" /></label>
+        <label>Missing Punch Numbers (comma separated):
+          <input v-model="returnMissingPunches" placeholder="e.g. 101,102" />
+        </label>
+        <button @click="confirmReturn">Confirm</button>
+        <button @click="cancelDialog">Cancel</button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { fetchBookings, updateBooking, deleteBooking as apiDeleteBooking } from '../api/bookings.js'
+import { fetchBookings, updateBooking, deleteBooking as apiDeleteBooking, adminLogin } from '../api/bookings.js'
 
 const bookings = ref([])
 const showPickupDialog = ref(false)
@@ -67,11 +77,29 @@ const returnDate = ref('')
 const returnMissingPunches = ref('')
 let currentBooking = null
 
+const adminPassword = ref('')
+const adminToken = ref(localStorage.getItem('adminToken') || '')
+const loginError = ref('')
+
+async function login() {
+  loginError.value = ''
+  try {
+    const { token } = await adminLogin(adminPassword.value)
+    adminToken.value = token
+    localStorage.setItem('adminToken', token)
+    await loadBookings()
+  } catch (e) {
+    loginError.value = e.message || 'Login failed'
+  }
+}
+
 async function loadBookings() {
   bookings.value = await fetchBookings()
 }
 
-onMounted(loadBookings)
+onMounted(() => {
+  if (adminToken.value) loadBookings()
+})
 
 function startPickup(booking) {
   currentBooking = booking
@@ -96,7 +124,7 @@ async function confirmPickup() {
     status: 'pickedup',
     actualPickupDate: pickupDate.value,
     pickupMissingPunches: pickupMissingPunches.value.split(',').map(s => s.trim()).filter(Boolean),
-  })
+  }, adminToken.value)
   await loadBookings()
   showPickupDialog.value = false
   currentBooking = null
@@ -107,13 +135,13 @@ async function confirmReturn() {
     status: 'returned',
     actualReturnDate: returnDate.value,
     returnMissingPunches: returnMissingPunches.value.split(',').map(s => s.trim()).filter(Boolean),
-  })
+  }, adminToken.value)
   await loadBookings()
   showReturnDialog.value = false
   currentBooking = null
 }
 async function deleteBooking(id) {
-  await apiDeleteBooking(id)
+  await apiDeleteBooking(id, adminToken.value)
   await loadBookings()
 }
 </script>
