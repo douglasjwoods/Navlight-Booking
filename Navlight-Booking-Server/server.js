@@ -87,9 +87,9 @@ async function sendBookingConfirmationEmail(booking) {
     '',
     `Event: ${booking.eventName}`,
     `Navlight set: ${booking.navlightSet}`,
-    `Pickup date: ${booking.pickupDate}`,
-    `Event date: ${booking.eventDate}`,
-    `Return date: ${booking.returnDate}`,
+    `Pickup date: ${formatDisplayDate(booking.pickupDate)}`,
+    `Event date: ${formatDisplayDate(booking.eventDate)}`,
+    `Return date: ${formatDisplayDate(booking.returnDate)}`,
     '',
     'The charges will be calculated based on the number of competitors entered and any missing punches after the event.',
     'The charge per competitor is $2.00, and any missing punch will incur a $200.00 charge.',
@@ -107,10 +107,27 @@ async function sendBookingConfirmationEmail(booking) {
 }
 
 function formatDisplayDate(value) {
-  if (!value || typeof value !== 'string') return '';
-  const [year, month, day] = value.split('-');
-  if (!year || !month || !day) return value;
-  return `${day}/${month}/${year}`;
+  if (!value) return '';
+
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
+    const day = String(value.getDate()).padStart(2, '0');
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const year = String(value.getFullYear());
+    return `${day}/${month}/${year}`;
+  }
+
+  if (typeof value === 'string') {
+    const datePart = value.includes('T') ? value.split('T')[0] : value;
+    const [year, month, day] = datePart.split('-');
+    if (year && month && day) {
+      return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+    }
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return formatDisplayDate(parsed);
 }
 
 function calculateNewMissingReturnedPunches(booking) {
@@ -152,13 +169,13 @@ function createInvoiceEmailText(booking, invoice) {
     '',
     'Please find your Navlight booking invoice details below:',
     '',
-    `1. Event name: ${invoice.eventName}`,
-    `2. Event date: ${invoice.eventDateDisplay}`,
-    `3. Usage charge: ${invoice.competitorsEntered} competitors × $${invoice.unitCharge.toFixed(2)} = $${invoice.usageCharge.toFixed(2)}`,
-    `4. Missing returned punches charge: ${invoice.newMissingPunches.length} × $200.00 = $${invoice.missingPunchCharge.toFixed(2)}`,
-    `   Newly missing punches: ${invoice.newMissingPunches.join(', ') || 'None'}`,
-    `5. Total charge: $${invoice.totalCharge.toFixed(2)}`,
-    `6. Please pay the total amount to bank account ${invoice.bankAccountNumber} with reference \"${invoice.paymentReference}\".`,
+    `Event name: ${invoice.eventName}`,
+    `Event date: ${invoice.eventDateDisplay}`,
+    `Usage charge: ${invoice.competitorsEntered} competitors × $${invoice.unitCharge.toFixed(2)} = $${invoice.usageCharge.toFixed(2)}`,
+    `Missing returned punches charge: ${invoice.newMissingPunches.length} × $200.00 = $${invoice.missingPunchCharge.toFixed(2)}`,
+    `Missing punches: ${invoice.newMissingPunches.join(', ') || 'None'}`,
+    `Total charge: $${invoice.totalCharge.toFixed(2)}`,
+    `Please pay the total amount to bank account ${invoice.bankAccountNumber} with reference \"${invoice.paymentReference}\".`,
     '',
     'Thank you.',
   ].join('\n');
@@ -175,7 +192,7 @@ function buildInvoicePdfBuffer(booking, invoice) {
 
     doc.fontSize(20).text('Navlight Booking Invoice', { align: 'left' });
     doc.moveDown(0.5);
-    doc.fontSize(11).text(`Issued: ${new Date().toLocaleDateString('en-GB')}`);
+    doc.fontSize(11).text(`Issued: ${formatDisplayDate(new Date())}`);
     doc.moveDown(1);
 
     doc.fontSize(12).text(`Name: ${booking.name}`);
