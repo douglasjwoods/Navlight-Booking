@@ -24,6 +24,7 @@ const invoiceUnitCharge = process.env.INVOICE_UNIT_CHARGE
   ? Number(process.env.INVOICE_UNIT_CHARGE)
   : 2;
 const bankAccountNumber = process.env.BANK_ACCOUNT_NUMBER || '';
+const financialControllerEmail = process.env.NAVLIGHT_FINANCIAL_CONTROLLER_EMAIL || '';
 
 const emailTransporter = smtpHost && smtpUser && smtpPass
   ? nodemailer.createTransport({
@@ -96,6 +97,7 @@ async function sendBookingConfirmationEmail(booking) {
   await emailTransporter.sendMail({
     from: emailFrom,
     to: booking.email,
+    ...(financialControllerEmail ? { bcc: financialControllerEmail } : {}),
     subject,
     text,
   });
