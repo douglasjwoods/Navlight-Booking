@@ -34,7 +34,8 @@
             <div>
               Returned: {{ formatDisplayDate(booking.actualReturnDate) }}<br>
               Missing punches: {{ getNewReturnMissingPunches(booking).join(', ') || 'None' }}<br>
-              Competitors entered: {{ booking.competitorsEntered ?? 'Not set' }}
+              Competitors entered: {{ booking.competitorsEntered ?? 'Not set' }}<br>
+              Invoice emailed: {{ formatDateTime(booking.invoiceSentAt) || 'Not sent' }}
             </div>
             <button @click="openInvoicePreview(booking)" class="btn">Create Invoice</button>
           </div>
@@ -146,6 +147,9 @@
         <label>Competitors Entered</label>
         <input type="number" min="0" step="1" v-model="editForm.competitorsEntered" placeholder="e.g. 120" />
 
+        <label>Invoice Emailed</label>
+        <input :value="formatDateTime(editForm.invoiceSentAt) || 'Not sent'" readonly />
+
         <div v-if="editError" class="error">{{ editError }}</div>
         <div class="dialog-actions">
           <button @click="saveEdit" class="btn">Save</button>
@@ -222,6 +226,7 @@ const editForm = ref({
   actualReturnDate: '',
   returnMissingPunchesInput: '',
   competitorsEntered: '',
+  invoiceSentAt: '',
 })
 let currentBooking = null
 const pendingDeleteBooking = ref(null)
@@ -255,6 +260,20 @@ function getNewReturnMissingPunches(booking) {
     : []
 
   return returnMissing.filter((punch) => !pickupMissing.includes(punch))
+}
+
+function formatDateTime(value) {
+  if (!value) return ''
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return parsed.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 }
 
 async function login() {
@@ -327,6 +346,7 @@ function startEdit(booking) {
     actualReturnDate: booking.actualReturnDate || '',
     returnMissingPunchesInput: Array.isArray(booking.returnMissingPunches) ? booking.returnMissingPunches.join(', ') : '',
     competitorsEntered: booking.competitorsEntered != null ? String(booking.competitorsEntered) : '',
+    invoiceSentAt: booking.invoiceSentAt || '',
   }
   showEditDialog.value = true
 }

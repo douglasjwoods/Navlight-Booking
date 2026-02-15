@@ -91,6 +91,9 @@ async function sendBookingConfirmationEmail(booking) {
     `Event date: ${booking.eventDate}`,
     `Return date: ${booking.returnDate}`,
     '',
+    'The charges will be calculated based on the number of competitors entered and any missing punches after the event.',
+    'The charge per competitor is $2.00, and any missing punch will incur a $200.00 charge.',
+    'You will receive an invoice after the return date.',
     'Thank you.',
   ].join('\n');
 

@@ -1,7 +1,7 @@
 [
   {
     "id": 1771187826810,
-    "navlightSet": "Set1",
+    "navlightSet": "Set2",
     "pickupDate": "2026-02-17",
     "eventDate": "2026-02-21",
     "returnDate": "2026-02-23",
@@ -22,5 +22,16 @@
     ],
     "competitorsEntered": 100,
     "invoiceSentAt": "2026-02-15T22:31:12.281Z"
+  },
+  {
+    "id": 1771196347047,
+    "navlightSet": "Set1",
+    "pickupDate": "2026-02-17",
+    "eventDate": "2026-02-21",
+    "returnDate": "2026-02-23",
+    "name": "DOUGLAS WOODS",
+    "email": "douglas@black-woods.co.nz",
+    "eventName": "Test Rogaine",
+    "status": "booked"
   }
 ]
