@@ -1,17 +1,17 @@
 
 <template>
-  <div class="menu">
-    <button @click="view = 'calendar'">View Calendar</button>
-    <button @click="view = 'booking'">Book Navlight</button>
-    <button @click="view = 'admin'">Admin</button>
+  <div class="menu" role="tablist" aria-label="Main navigation">
+    <button :class="['tab-btn', { active: view === 'calendar' }]" @click="view = 'calendar'">Calendar</button>
+    <button :class="['tab-btn', { active: view === 'booking' }]" @click="view = 'booking'">Book Navlight</button>
+    <button :class="['tab-btn', { active: view === 'admin' }]" @click="view = 'admin'">Admin</button>
   </div>
-  <div v-if="view === 'calendar'">
+  <div class="panel" v-if="view === 'calendar'">
     <BookingCalendar :bookings="bookings" />
   </div>
-  <div v-else-if="view === 'booking'">
+  <div class="panel" v-else-if="view === 'booking'">
     <BookingForm @booking-success="refreshBookings" />
   </div>
-  <div v-else-if="view === 'admin'">
+  <div class="panel" v-else-if="view === 'admin'">
     <AdminPanel />
   </div>
 </template>
@@ -36,11 +36,35 @@ onMounted(refreshBookings)
 <style scoped>
 .menu {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e8edf5;
+  padding-bottom: 12px;
 }
-button {
-  padding: 8px 16px;
-  font-size: 16px;
+
+.tab-btn {
+  border: 1px solid #d8deea;
+  background: #f8faff;
+  color: #334155;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab-btn:hover {
+  background: #eef3ff;
+}
+
+.tab-btn.active {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+.panel {
+  padding-top: 6px;
 }
 </style>

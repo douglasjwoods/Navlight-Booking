@@ -1,10 +1,10 @@
 <template>
-  <div>
+  <div class="admin-wrap">
     <h2>Admin Panel</h2>
     <div v-if="!adminToken">
-      <div class="dialog">
+      <div class="dialog login-card">
         <h3>Admin Login</h3>
-        <input type="password" v-model="adminPassword" placeholder="Enter admin password" />
+        <input type="password" v-model="adminPassword" placeholder="Enter admin password" @keyup.enter="login" />
         <div v-if="loginError" class="error">{{ loginError }}</div>
         <button @click="login">Login</button>
       </div>
@@ -34,7 +34,7 @@
               Missing punches: {{ booking.returnMissingPunches?.join(', ') || 'None' }}
             </div>
           </div>
-          <button @click="deleteBooking(booking.id)" class="delete">Delete Booking</button>
+          <button @click="deleteBooking(booking.id)" class="btn danger">Delete Booking</button>
         </li>
       </ul>
       <div v-else>No bookings found.</div>
@@ -42,23 +42,29 @@
       <!-- Pickup Dialog -->
       <div v-if="showPickupDialog" class="dialog">
         <h3>Mark as Picked Up</h3>
-        <label>Date of Pickup: <input type="date" v-model="pickupDate" /></label>
-        <label>Missing Punch Numbers (comma separated):
+        <label>Date of Pickup</label>
+        <input type="date" v-model="pickupDate" />
+        <label>Missing Punch Numbers (comma separated)
           <input v-model="pickupMissingPunches" placeholder="e.g. 101,102" />
         </label>
-        <button @click="confirmPickup">Confirm</button>
-        <button @click="cancelDialog">Cancel</button>
+        <div class="dialog-actions">
+          <button @click="confirmPickup" class="btn">Confirm</button>
+          <button @click="cancelDialog" class="btn secondary">Cancel</button>
+        </div>
       </div>
 
       <!-- Return Dialog -->
       <div v-if="showReturnDialog" class="dialog">
         <h3>Mark as Returned</h3>
-        <label>Date of Return: <input type="date" v-model="returnDate" /></label>
-        <label>Missing Punch Numbers (comma separated):
+        <label>Date of Return</label>
+        <input type="date" v-model="returnDate" />
+        <label>Missing Punch Numbers (comma separated)
           <input v-model="returnMissingPunches" placeholder="e.g. 101,102" />
         </label>
-        <button @click="confirmReturn">Confirm</button>
-        <button @click="cancelDialog">Cancel</button>
+        <div class="dialog-actions">
+          <button @click="confirmReturn" class="btn">Confirm</button>
+          <button @click="cancelDialog" class="btn secondary">Cancel</button>
+        </div>
       </div>
     </div>
   </div>
@@ -147,31 +153,117 @@ async function deleteBooking(id) {
 </script>
 
 <style scoped>
-.admin-booking {
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
-  background: #f9f9f9;
+.admin-wrap h2 {
+  margin: 0 0 14px;
+  color: #1f2a44;
 }
-.delete {
-  color: #fff;
-  background: #c00;
+
+.admin-booking {
+  border: 1px solid #e3e8f2;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+  background: #fbfcff;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+input {
+  border: 1px solid #d3dce8;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  background: #ffffff;
+}
+
+input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.btn {
   border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
+  border-radius: 10px;
+  background: #1d4ed8;
+  color: #fff;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: #1b45bf;
+}
+
+.btn.secondary {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn.secondary:hover {
+  background: #cfd8e4;
+}
+
+.btn.danger {
+  background: #c62828;
   margin-top: 8px;
 }
+
+.btn.danger:hover {
+  background: #ab1f1f;
+}
+
 .dialog {
   position: fixed;
-  top: 30%;
+  top: 28%;
   left: 50%;
-  transform: translate(-50%, -30%);
+  transform: translate(-50%, -28%);
   background: #fff;
-  border: 1px solid #888;
-  border-radius: 8px;
+  border: 1px solid #d8e0ed;
+  border-radius: 12px;
   padding: 24px;
   z-index: 1000;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.2);
+  min-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-card {
+  position: static;
+  transform: none;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  max-width: 420px;
+}
+
+.dialog h3 {
+  margin: 0 0 4px;
+  color: #1e293b;
+}
+
+label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.error {
+  color: #b42318;
+  background: #feeceb;
+  border: 1px solid #f7cac7;
+  border-radius: 10px;
+  padding: 8px 10px;
 }
 </style>
