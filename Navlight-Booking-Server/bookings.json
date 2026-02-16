@@ -32,6 +32,11 @@
     "name": "DOUGLAS WOODS",
     "email": "douglas@black-woods.co.nz",
     "eventName": "Test Rogaine",
-    "status": "booked"
+    "status": "pickedup",
+    "actualPickupDate": "2026-02-17",
+    "pickupMissingPunches": [
+      "67",
+      "45"
+    ]
   }
 ]

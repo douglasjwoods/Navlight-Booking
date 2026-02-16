@@ -31,8 +31,10 @@ To send a confirmation email to the person who makes a booking, set these enviro
 - `SMTP_PASS` (SMTP password/app password)
 - `EMAIL_FROM` (optional sender address; defaults to `SMTP_USER`)
 - `NAVLIGHT_FINANCIAL_CONTROLLER_EMAIL` (optional; invoices are copied to this address)
+- `BANK_ACCOUNT_NAME` (required to show account name in invoice payment instructions)
 - `BANK_ACCOUNT_NUMBER` (required to send invoice emails)
 - `INVOICE_UNIT_CHARGE` (optional, defaults to `2` dollars per competitor)
+- `MISSING_PUNCH_CHARGE` (optional, defaults to `200` dollars per missing punch)
 
 If SMTP values are not set, booking creation still works and no email is sent.
 

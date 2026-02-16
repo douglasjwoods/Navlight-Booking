@@ -23,6 +23,10 @@ const emailFrom = process.env.EMAIL_FROM || smtpUser;
 const invoiceUnitCharge = process.env.INVOICE_UNIT_CHARGE
   ? Number(process.env.INVOICE_UNIT_CHARGE)
   : 2;
+const missingPunchUnitCharge = process.env.MISSING_PUNCH_CHARGE
+  ? Number(process.env.MISSING_PUNCH_CHARGE)
+  : 200;
+const bankAccountName = process.env.BANK_ACCOUNT_NAME || '';
 const bankAccountNumber = process.env.BANK_ACCOUNT_NUMBER || '';
 const financialControllerEmail = process.env.NAVLIGHT_FINANCIAL_CONTROLLER_EMAIL || '';
 
@@ -92,7 +96,43 @@ async function sendBookingConfirmationEmail(booking) {
     `Return date: ${formatDisplayDate(booking.returnDate)}`,
     '',
     'The charges will be calculated based on the number of competitors entered and any missing punches after the event.',
-    'The charge per competitor is $2.00, and any missing punch will incur a $200.00 charge.',
+    `The charge per competitor is $${invoiceUnitCharge.toFixed(2)}, and any missing punch will incur a $${missingPunchUnitCharge.toFixed(2)} charge.`,
+    'You will receive an invoice after the return date.',
+    'Thank you.',
+  ].join('\n');
+
+  await emailTransporter.sendMail({
+    from: emailFrom,
+    to: booking.email,
+    ...(financialControllerEmail ? { bcc: financialControllerEmail } : {}),
+    subject,
+    text,
+  });
+}
+
+async function sendPickupConfirmationEmail(booking) {
+  if (!emailTransporter || !emailFrom || !booking?.email) return;
+
+  const missingPunches = Array.isArray(booking.pickupMissingPunches)
+    ? booking.pickupMissingPunches.map(String).filter(Boolean)
+    : [];
+
+  const subject = `Navlight picked up: ${booking.eventName}`;
+  const text = [
+    `Hi ${booking.name},`,
+    '',
+    'Your Navlight pickup has been recorded.',
+    '',
+    `Event: ${booking.eventName}`,
+    `Navlight set: ${booking.navlightSet}`,
+    `Pickup date: ${formatDisplayDate(booking.pickupDate)}`,
+    `Event date: ${formatDisplayDate(booking.eventDate)}`,
+    `Return date: ${formatDisplayDate(booking.returnDate)}`,
+    `Actual pickup date: ${formatDisplayDate(booking.actualPickupDate)}`,
+    `Missing punches at pickup: ${missingPunches.join(', ') || 'None'}`,
+    '',
+    'The charges will be calculated based on the number of competitors entered and any missing punches after the event.',
+    `The charge per competitor is $${invoiceUnitCharge.toFixed(2)}, and any missing punch will incur a $${missingPunchUnitCharge.toFixed(2)} charge.`,
     'You will receive an invoice after the return date.',
     'Thank you.',
   ].join('\n');
@@ -145,7 +185,7 @@ function buildInvoiceData(booking) {
   const competitors = Number(booking.competitorsEntered || 0);
   const usageCharge = competitors * invoiceUnitCharge;
   const newMissingPunches = calculateNewMissingReturnedPunches(booking);
-  const missingPunchCharge = newMissingPunches.length * 200;
+  const missingPunchCharge = newMissingPunches.length * missingPunchUnitCharge;
   const totalCharge = usageCharge + missingPunchCharge;
 
   return {
@@ -156,8 +196,10 @@ function buildInvoiceData(booking) {
     unitCharge: invoiceUnitCharge,
     usageCharge,
     newMissingPunches,
+    missingPunchUnitCharge,
     missingPunchCharge,
     totalCharge,
+    bankAccountName,
     bankAccountNumber,
     paymentReference: booking.eventName,
   };
@@ -172,10 +214,10 @@ function createInvoiceEmailText(booking, invoice) {
     `Event name: ${invoice.eventName}`,
     `Event date: ${invoice.eventDateDisplay}`,
     `Usage charge: ${invoice.competitorsEntered} competitors × $${invoice.unitCharge.toFixed(2)} = $${invoice.usageCharge.toFixed(2)}`,
-    `Missing returned punches charge: ${invoice.newMissingPunches.length} × $200.00 = $${invoice.missingPunchCharge.toFixed(2)}`,
+    `Missing returned punches charge: ${invoice.newMissingPunches.length} × $${invoice.missingPunchUnitCharge.toFixed(2)} = $${invoice.missingPunchCharge.toFixed(2)}`,
     `Missing punches: ${invoice.newMissingPunches.join(', ') || 'None'}`,
     `Total charge: $${invoice.totalCharge.toFixed(2)}`,
-    `Please pay the total amount to bank account ${invoice.bankAccountNumber} with reference \"${invoice.paymentReference}\".`,
+    `Please pay the total amount to account ${invoice.bankAccountName || 'Not configured'} (${invoice.bankAccountNumber || 'Not configured'}) with reference \"${invoice.paymentReference}\".`,
     '',
     'Thank you.',
   ].join('\n');
@@ -199,13 +241,13 @@ function buildInvoicePdfBuffer(booking, invoice) {
     doc.text(`Email: ${booking.email}`);
     doc.moveDown(0.7);
 
-    doc.text(`1. Event name: ${invoice.eventName}`);
-    doc.text(`2. Event date: ${invoice.eventDateDisplay}`);
-    doc.text(`3. Usage charge: ${invoice.competitorsEntered} competitors × $${invoice.unitCharge.toFixed(2)} = $${invoice.usageCharge.toFixed(2)}`);
-    doc.text(`4. Missing returned punches charge: ${invoice.newMissingPunches.length} × $200.00 = $${invoice.missingPunchCharge.toFixed(2)}`);
-    doc.text(`   Newly missing punches: ${invoice.newMissingPunches.join(', ') || 'None'}`);
-    doc.text(`5. Total charge: $${invoice.totalCharge.toFixed(2)}`);
-    doc.text(`6. Please pay to bank account ${invoice.bankAccountNumber} with reference "${invoice.paymentReference}".`);
+    doc.text(`Event name: ${invoice.eventName}`);
+    doc.text(`Event date: ${invoice.eventDateDisplay}`);
+    doc.text(`Usage charge: ${invoice.competitorsEntered} competitors × $${invoice.unitCharge.toFixed(2)} = $${invoice.usageCharge.toFixed(2)}`);
+    doc.text(`Missing punches charge: ${invoice.newMissingPunches.length} × $${invoice.missingPunchUnitCharge.toFixed(2)} = $${invoice.missingPunchCharge.toFixed(2)}`);
+    doc.text(`   Missing punches: ${invoice.newMissingPunches.join(', ') || 'None'}`);
+    doc.text(`Total charge: $${invoice.totalCharge.toFixed(2)}`);
+    doc.text(`Please pay to account ${invoice.bankAccountName || 'Not configured'} (${invoice.bankAccountNumber || 'Not configured'}) with reference "${invoice.paymentReference}".`);
 
     doc.moveDown(1);
     doc.text('Thank you.');
@@ -288,7 +330,7 @@ app.post('/bookings', async (req, res) => {
 
 
 // PATCH /bookings/:id (update pickup/return info)
-app.patch('/bookings/:id', requireAdmin, (req, res) => {
+app.patch('/bookings/:id', requireAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const bookings = loadBookings();
   const idx = bookings.findIndex(b => b.id === id);
@@ -320,8 +362,19 @@ app.patch('/bookings/:id', requireAdmin, (req, res) => {
     return res.status(409).json({ error: 'Navlight set is already booked for these dates.' });
   }
 
+  const shouldSendPickupEmail = currentBooking.status !== 'pickedup' && updatedBooking.status === 'pickedup';
+
   bookings[idx] = updatedBooking;
   saveBookings(bookings);
+
+  if (shouldSendPickupEmail) {
+    try {
+      await sendPickupConfirmationEmail(updatedBooking);
+    } catch (error) {
+      console.error('Failed to send pickup confirmation email:', error.message);
+    }
+  }
+
   res.json(updatedBooking);
 });
 

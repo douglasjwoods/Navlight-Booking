@@ -74,14 +74,15 @@
           </p>
           <p>
             <strong>4. Missing returned punches:</strong>
-            {{ invoicePreview.newMissingPunches.length }} × $200.00
+            {{ invoicePreview.newMissingPunches.length }} × ${{ Number(invoicePreview.missingPunchUnitCharge ?? 200).toFixed(2) }}
             = ${{ Number(invoicePreview.missingPunchCharge).toFixed(2) }}
           </p>
           <p><strong>Missing punches list:</strong> {{ invoicePreview.newMissingPunches.join(', ') || 'None' }}</p>
           <p><strong>5. Total charge:</strong> ${{ Number(invoicePreview.totalCharge).toFixed(2) }}</p>
           <p>
             <strong>6. Payment instructions:</strong>
-            Pay to bank account {{ invoicePreview.bankAccountNumber || 'Not configured' }}
+            Pay to account {{ invoicePreview.bankAccountName || 'Not configured' }}
+            ({{ invoicePreview.bankAccountNumber || 'Not configured' }})
             with reference "{{ invoicePreview.paymentReference }}".
           </p>
         </div>
